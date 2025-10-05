@@ -1,0 +1,57 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions:
+  id-token: write
+  contents: write
+  packages: write
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/k8s-gitops-lab-app-hello
+  GITOPS_REPO: paramosr/k8s-gitops-lab-gitops
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & push image
+        run: docker buildx build --push -t $IMAGE:${{ github.sha }} .
+
+      - name: Install cosign, syft, trivy, crane
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/sigstore/cosign/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+          curl -sSfL https://storage.googleapis.com/go-containerregistry/crane/latest/linux_amd64.tar.gz | tar -xz -C /usr/local/bin
+
+      - name: SBOM
+        run: syft $IMAGE:${{ github.sha }} -o spdx-json > sbom.json
+
+      - name: Scan (fail on HIGH/CRITICAL)
+        run: ./bin/trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE:${{ github.sha }}
+
+      - name: Sign image (keyless OIDC)
+        run: COSIGN_EXPERIMENTAL=1 cosign sign $IMAGE:${{ github.sha }}
+
+      - name: Get digest
+        id: d
+        run: echo "digest=$(crane digest $IMAGE:${{ github.sha }})" >> $GITHUB_OUTPUT
+
+      # PR to DEV
+      - name: PR to gitops (DEV)
+        env: { GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
+        run: |
+          git clone https://github.com/$GITOPS_REPO.git
+          cd k8s-gitops-lab-gitops
+          FILE=workloads/hello-api/envs/dev/values.yaml
+          sed -i "s|repository:.*|repository: $IMAGE|g" $FILE
+          sed -i "s|digest:.*|digest: \"${{ steps.d.outputs.digest }}\"|g" $FILE
+          git config user.name "ci-bot"; git config user.email "ci@example.local"
+          git checkout -b promote/dev-${{ github.sha }}
+          git add $FILE && git commit -m "promote dev ${{ steps.d.outputs.digest }}"
+          git push -u origin HEAD
+          gh pr create --title "Promote hello-api to dev" --body "digest ${{ steps.d.outputs.digest }}"
+
