@@ -29,8 +29,8 @@ jobs:
           chmod +x /usr/local/bin/cosign
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
           curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-          curl -sSfL https://github.com/google/go-containerregistry/releases/latest/download/crane-linux-amd64 -o /usr/local/bin/crane
-          chmod +x /usr/local/bin/crane
+          # curl -sSfL https://github.com/google/go-containerregistry/releases/latest/download/crane-linux-amd64 -o /usr/local/bin/crane
+          # chmod +x /usr/local/bin/crane
 
       - name: SBOM
         run: syft $IMAGE:${{ github.sha }} -o spdx-json > sbom.json
@@ -41,9 +41,15 @@ jobs:
       - name: Sign image (keyless OIDC)
         run: COSIGN_EXPERIMENTAL=1 cosign sign $IMAGE:${{ github.sha }}
 
+      # - name: Get digest
+      #   id: d
+      #   run: echo "digest=$(crane digest $IMAGE:${{ github.sha }})" >> $GITHUB_OUTPUT
+      
       - name: Get digest
         id: d
-        run: echo "digest=$(crane digest $IMAGE:${{ github.sha }})" >> $GITHUB_OUTPUT
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE:${{ github.sha }} | cut -d'@' -f2)
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
 
       - name: PR to gitops (DEV)
         env:
