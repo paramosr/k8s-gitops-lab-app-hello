@@ -67,5 +67,5 @@ jobs:
           git add $FILE
           git commit -m "promote dev ${{ steps.d.outputs.digest }}"
           git push -u https://x-access-token:${GH_TOKEN}@github.com/$GITOPS_REPO.git HEAD
-          gh pr create --title "Promote hello-api to dev" --body "digest ${{ steps.d.outputs.digest }}"
+          gh pr create --title "Promote hello-api to dev" --body "digest ${{ steps.d.outputs.digest }}" --head promote/dev-${{ github.sha }}
 
