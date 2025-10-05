@@ -6,7 +6,7 @@ RUN npm ci --omit=dev
 
 FROM gcr.io/distroless/nodejs20:nonroot
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# COPY --from=deps /app/node_modules ./node_modules # Uncomment if you want to include node_modules
 COPY src ./src
 USER nonroot:nonroot
 EXPOSE 3000
