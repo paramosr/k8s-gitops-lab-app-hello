@@ -9,6 +9,7 @@ permissions:
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/k8s-gitops-lab-app-hello
   GITOPS_REPO: paramosr/k8s-gitops-lab-gitops
+  GH_TOKEN: ${{ secrets.GH_PAT }}
 
 jobs:
   build:
@@ -53,7 +54,7 @@ jobs:
 
       - name: PR to gitops (DEV)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           git clone https://github.com/$GITOPS_REPO.git
           cd k8s-gitops-lab-gitops
