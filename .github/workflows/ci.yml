@@ -25,10 +25,12 @@ jobs:
 
       - name: Install cosign, syft, trivy, crane
         run: |
-          curl -sSfL https://raw.githubusercontent.com/sigstore/cosign/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
+          chmod +x /usr/local/bin/cosign
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
           curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-          curl -sSfL https://storage.googleapis.com/go-containerregistry/crane/latest/linux_amd64.tar.gz | tar -xz -C /usr/local/bin
+          curl -sSfL https://github.com/google/go-containerregistry/releases/latest/download/crane-linux-amd64 -o /usr/local/bin/crane
+          chmod +x /usr/local/bin/crane
 
       - name: SBOM
         run: syft $IMAGE:${{ github.sha }} -o spdx-json > sbom.json
