@@ -38,9 +38,6 @@ jobs:
       - name: Scan (fail on HIGH/CRITICAL)
         run: ./bin/trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE:${{ github.sha }}
 
-      - name: Sign image (keyless OIDC)
-        run: COSIGN_EXPERIMENTAL=1 cosign sign $IMAGE:${{ github.sha }}
-
       # - name: Get digest
       #   id: d
       #   run: echo "digest=$(crane digest $IMAGE:${{ github.sha }})" >> $GITHUB_OUTPUT
@@ -50,6 +47,9 @@ jobs:
         run: |
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE:${{ github.sha }} | cut -d'@' -f2)
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign image (keyless OIDC)
+        run: COSIGN_EXPERIMENTAL=1 COSIGN_YES=true cosign sign $IMAGE@${{ steps.d.outputs.digest }}
 
       - name: PR to gitops (DEV)
         env:
